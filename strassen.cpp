@@ -34,52 +34,56 @@ int h[100][100] = {0};
 
 int C[100][100] = {0};
 
-void print(int z[][100],int x){
+int sevenarray[100] = {0};
+
+void print(int x[][100],int n){
     int i,j;
-    cout << "hu " << x << endl;
-    for(i=0;i<x;i++){
-        for(j=0;j<x;j++){
-            cout << z[i][j] << " ";
+    for(i=0;i<n;i++){
+        for(j=0;j<n;j++){
+            cout << x[i][j] << " ";
         }
         cout << "\n";
     }
 }
 
 
-void add(int x[][100], int y[][100], int n){
+void add(int x[][100], int y[][100], int n, int z[][100]){
     int i,j;
     for(i=0;i<n;i++){
         for(j=0;j<n;j++){
-            x[i][j] += y[i][j];
+            z[i][j] = x[i][j] + y[i][j];
         }
     }
 }
 
-void subtract(int x[][100], int y[][100], int n){
+void subtract(int x[][100], int y[][100], int n, int z[][100]){
     int i,j;
     for(i=0;i<n;i++){
         for(j=0;j<n;j++){
-            x[i][j] -= y[i][j];
+            z[i][j] = x[i][j] - y[i][j];
         }
     }
 }
 
 
-void multiply(int x[][100],int y[][100], int n){
+void multiply(int x[][100],int y[][100], int n, int z[][100]){
     int i,j,k;
-    int z[100][100] = {0};
     for(i=0;i<n;i++){
         for(j=0;j<n;j++){
             for(k=0;k<n;k++){
-                z[i][j] = x[i][k]*y[k][j];
+                z[i][j] += x[i][k]*y[k][j];
             }
         }
     }
+}
+
+void cop(int x[][100], int y[][100], int n){
+    int i,j;
     for(i=0;i<n;i++){
         for(j=0;j<n;j++){
-            x[i][j] = z[i][j];
+            x[i][j] = y[i][j];
         }
-    }
+    }   
 }
 
 int main (int argc, char *argv[])
@@ -87,6 +91,7 @@ int main (int argc, char *argv[])
     int numtasks, taskid, i, j, k, l, source, n, m; 
     int p, N;
     int cur_level, parent_id, task, temp, temp1, levelby7, max_level;
+
     
     MPI_Status status;
     MPI_Request request,send_request;
@@ -114,12 +119,13 @@ int main (int argc, char *argv[])
 
 
         N = pow(2,ceil(log2(n)));   // matrix size after padding
-        temp1 = 1;
+        cout << "N " << N << endl;
+        temp1 = 7;
         temp = 0;
         levelby7 = 0;
         for(i=0;i<n;i++){
             temp += temp1;
-            if(temp>numtasks){
+            if(temp>numtasks-1){
                 break;
             }
             levelby7 += 1;
@@ -128,55 +134,70 @@ int main (int argc, char *argv[])
         max_level = min(int(log2(N)),levelby7);           // maxlevels we can divide matrix
         cur_level = 1;
 
+        cout << "max_level " << max_level << endl;
 
-        for(i=1;i<=7;i++){
-            MPI_Send(&(A[0][0]), 10000, MPI_INT, i, 101, MPI_COMM_WORLD);
-            MPI_Send(&(B[0][0]), 10000, MPI_INT, i, 102, MPI_COMM_WORLD);
-            MPI_Send(&N, 1, MPI_INT, i, 103, MPI_COMM_WORLD);
-            MPI_Send(&i, 1, MPI_INT, i, 104, MPI_COMM_WORLD);
-            MPI_Send(&cur_level, 1, MPI_INT, i, 105, MPI_COMM_WORLD);
-            MPI_Send(&max_level, 1, MPI_INT, i, 106, MPI_COMM_WORLD);
-            MPI_Send(&parent_id, 1, MPI_INT, i, 107, MPI_COMM_WORLD);
+
+        if(max_level>0){
+            for(i=1;i<=7;i++){
+                MPI_Send(&(A[0][0]), 10000, MPI_INT, i, 101, MPI_COMM_WORLD);
+                MPI_Send(&(B[0][0]), 10000, MPI_INT, i, 102, MPI_COMM_WORLD);
+                MPI_Send(&N, 1, MPI_INT, i, 103, MPI_COMM_WORLD);
+                MPI_Send(&i, 1, MPI_INT, i, 104, MPI_COMM_WORLD);
+                MPI_Send(&cur_level, 1, MPI_INT, i, 105, MPI_COMM_WORLD);
+                MPI_Send(&max_level, 1, MPI_INT, i, 106, MPI_COMM_WORLD);
+                MPI_Send(&taskid, 1, MPI_INT, i, 107, MPI_COMM_WORLD);
+            }
+
+            MPI_Recv(&(p1[0][0]), 10000, MPI_INT, 1, 201, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+            MPI_Recv(&(p2[0][0]), 10000, MPI_INT, 2, 201, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+            MPI_Recv(&(p3[0][0]), 10000, MPI_INT, 3, 201, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+            MPI_Recv(&(p4[0][0]), 10000, MPI_INT, 4, 201, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+            MPI_Recv(&(p5[0][0]), 10000, MPI_INT, 5, 201, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+            MPI_Recv(&(p6[0][0]), 10000, MPI_INT, 6, 201, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+            MPI_Recv(&(p7[0][0]), 10000, MPI_INT, 7, 201, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+
+
+            add(p5,p4,N/2,a);
+            add(a,p6,N/2,a);
+            subtract(a,p2,N/2,a);     // p5+p4+p6-p2
+
+            add(p1,p2,N/2,b);         // p1+p2
+
+            add(p3,p4,N/2,c);         // p3+p4
+
+            add(p1,p5,N/2,d);
+            subtract(d,p3,N/2,d);
+            subtract(d,p7,N/2,d);     // p1+p5-p3-p7
+
+
+            while(1){                       // Combining a,b,c,d to get final matrix
+                for(i=0;i<N/2;i++){
+                    for(j=0;j<N/2;j++){
+                        C[i][j] = a[i][j];
+                    }
+                }
+                for(i=0;i<N/2;i++){ 
+                    for(j=0;j<N/2;j++){
+                        C[i][j+N/2] = b[i][j];
+                    }
+                }
+                for(i=0;i<N/2;i++){
+                    for(j=0;j<N/2;j++){
+                        C[i+N/2][j] = c[i][j];
+                    }
+                }
+                for(i=0;i<N/2;i++){
+                    for(j=0;j<N/2;j++){
+                        C[i+N/2][j+N/2] = d[i][j];
+                    }
+                }
+                break;
+            }
+
         }
-
-        MPI_Recv(&(p1[0][0]), 10000, MPI_INT, 1, 201, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-        MPI_Recv(&(p2[0][0]), 10000, MPI_INT, 2, 201, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-        MPI_Recv(&(p3[0][0]), 10000, MPI_INT, 3, 201, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-        MPI_Recv(&(p4[0][0]), 10000, MPI_INT, 4, 201, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-        MPI_Recv(&(p5[0][0]), 10000, MPI_INT, 5, 201, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-        MPI_Recv(&(p6[0][0]), 10000, MPI_INT, 6, 201, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-        MPI_Recv(&(p7[0][0]), 10000, MPI_INT, 7, 201, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-
-
-
-        a = subtract(add(add(p5,p4,N/2),p6,N/2),p2,N/2);
-        b = add(p1,p2,N/2);
-        c = add(p3,p4,N/2);
-        d = subtract(add(p1,p5,N/2),add(p3,p7,N/2),N/2);
-
-        while(1){                       // Combining a,b,c,d to get final matrix
-            for(i=0;i<N/2;i++){
-                for(j=0;j<N/2;j++){
-                    C[i][j] = a[i][j];
-                }
-            }
-            for(i=0;i<N/2;i++){ 
-                for(j=0;j<N/2;j++){
-                    C[i][j+N/2] = b[i][j];
-                }
-            }
-            for(i=0;i<N/2;i++){
-                for(j=0;j<N/2;j++){
-                    C[i+N/2][j] = c[i][j];
-                }
-            }
-            for(i=0;i<N/2;i++){
-                for(j=0;j<N/2;j++){
-                    C[i+N/2][j+N/2] = d[i][j];
-                }
-            }
+        else{
+            multiply(A,B,N,C);
         }
-
         for(i=0;i<n;i++){
             for(j=0;j<n;j++){
                 cout << C[i][j] << " ";     // Printing final matrix
@@ -190,13 +211,30 @@ int main (int argc, char *argv[])
     if (taskid > MASTER)
     {
         source = MASTER;
-        MPI_Recv(&(A[0][0]), 10000, MPI_INT, 0, 101, MPI_COMM_WORLD, &status);
-        MPI_Recv(&(B[0][0]), 10000, MPI_INT, 0, 102, MPI_COMM_WORLD, &status);
-        MPI_Recv(&N, 1, MPI_INT, 0, 103, MPI_COMM_WORLD, &status);
-        MPI_Recv(&task, 1, MPI_INT, 0, 104, MPI_COMM_WORLD, &status);
-        MPI_Recv(&cur_level, 1, MPI_INT, 0, 105, MPI_COMM_WORLD, &status);
-        MPI_Recv(&max_level, 1, MPI_INT, 0, 106, MPI_COMM_WORLD, &status);
-        MPI_Recv(&parent_id, 1, MPI_INT, 0, 107, MPI_COMM_WORLD, &status);
+        int y1=7,y2=0,y3=0,y4,from;
+        if(taskid<=7){
+            from = 0;
+        }
+        else{
+            while(1){
+                if(y2>=taskid)
+                    break;
+                y4 = y3;
+                y3 = y2;
+                y2 += y1;
+                y1 *= 7;
+            }
+            from = y4+((taskid-y3-1)/7)+1;
+        }
+
+        MPI_Recv(&(A[0][0]), 10000, MPI_INT, from, 101, MPI_COMM_WORLD, &status);
+        MPI_Recv(&(B[0][0]), 10000, MPI_INT, from, 102, MPI_COMM_WORLD, &status);
+        MPI_Recv(&N, 1, MPI_INT, from, 103, MPI_COMM_WORLD, &status);
+        MPI_Recv(&task, 1, MPI_INT, from, 104, MPI_COMM_WORLD, &status);
+        MPI_Recv(&cur_level, 1, MPI_INT, from, 105, MPI_COMM_WORLD, &status);
+        MPI_Recv(&max_level, 1, MPI_INT, from, 106, MPI_COMM_WORLD, &status);
+        MPI_Recv(&parent_id, 1, MPI_INT, from, 107, MPI_COMM_WORLD, &status);
+        // cout << "Recieved taskid " << taskid << endl;
 
         while(1){                     // Dividing matrix A,B into a,b,c,d,e,f,g,h
             for(i=0;i<N/2;i++){
@@ -223,40 +261,45 @@ int main (int argc, char *argv[])
                     h[i][j] = B[i+N/2][j+N/2];
                 }
             }
+            break;
         }
 
         if(task==1){
-            memcpy(A1, a, sizeof(int)*100*100);
-            B1 = subtract(f,h,N/2);
+            // memcpy(A1, a, sizeof(int)*100*100);
+            cop(A1,a,N/2);
+            subtract(f,h,N/2,B1);
         }
         else if(task==2){
-            A1 = add(a,b,N/2);
-            memcpy(B1, h, sizeof(int)*100*100);
+            add(a,b,N/2,A1);
+            // memcpy(B1, h, sizeof(int)*100*100);
+            cop(B1,h,N/2);
         }
         else if(task==3){
-            A1 = add(c,d,N/2);
-            memcpy(B1, e, sizeof(int)*100*100);
+            add(c,d,N/2,A1);
+            // memcpy(B1, e, sizeof(int)*100*100);
+            cop(B1,e,N/2);
         }
         else if(task==4){
-            memcpy(A1, d, sizeof(int)*100*100);
-            B1 = subtract(g,e,N/2);
+            // memcpy(A1, d, sizeof(int)*100*100);
+            cop(A1,d,N/2);
+            subtract(g,e,N/2,B1);
         }
         else if(task==5){
-            A1 = add(a,d,N/2);
-            B1 = add(e,h,N/2);
+            add(a,d,N/2,A1);
+            add(e,h,N/2,B1);
         }
         else if(task==6){
-            A1 = subtract(b,d,N/2);
-            B1 = add(g,h,N/2);
+            subtract(b,d,N/2,A1);
+            add(g,h,N/2,B1);
         }
         else if(task==7){
-            A1 = subtract(a,c,N/2);
-            B1 = add(e,f,N/2);
+            subtract(a,c,N/2,A1);
+            add(e,f,N/2,B1);
         }
 
 
         if(cur_level>=max_level){
-            C = multiply(A1,B1,N/2);
+            multiply(A1,B1,N/2,C);
             MPI_Send(&(C[0][0]), 10000, MPI_INT, parent_id, 201, MPI_COMM_WORLD);
         }
         else{
@@ -274,6 +317,7 @@ int main (int argc, char *argv[])
                 t2 += t1;
                 t1 *= 7;
             }
+
 
             for(i=1;i<=7;i++){
                 MPI_Send(&(A1[0][0]), 10000, MPI_INT, t2+(taskid-t3-1)*7+i, 101, MPI_COMM_WORLD);
@@ -293,34 +337,40 @@ int main (int argc, char *argv[])
             MPI_Recv(&(p6[0][0]), 10000, MPI_INT, t2+(taskid-t3-1)*7+6, 201, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
             MPI_Recv(&(p7[0][0]), 10000, MPI_INT, t2+(taskid-t3-1)*7+7, 201, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 
+            add(p5,p4,new_N/2,a);
+            add(a,p6,new_N/2,a);
+            subtract(a,p2,new_N/2,a);            // p5+p4+p6-p2
 
+            add(p1,p2,new_N/2,b);         // p1+p2
 
-            a = subtract(add(add(p5,p4,N/2),p6,N/2),p2,N/2);
-            b = add(p1,p2,N/2);
-            c = add(p3,p4,N/2);
-            d = subtract(add(p1,p5,N/2),add(p3,p7,N/2),N/2);
+            add(p3,p4,new_N/2,c);         // p3+p4
+
+            add(p1,p5,new_N/2,d);
+            subtract(d,p3,new_N/2,d);
+            subtract(d,p7,new_N/2,d);    // p1+p5-p3-p7
 
             while(1){                       // Combining a,b,c,d to get final matrix
-                for(i=0;i<N/2;i++){
-                    for(j=0;j<N/2;j++){
+                for(i=0;i<new_N/2;i++){
+                    for(j=0;j<new_N/2;j++){
                         C[i][j] = a[i][j];
                     }
                 }
-                for(i=0;i<N/2;i++){ 
-                    for(j=0;j<N/2;j++){
-                        C[i][j+N/2] = b[i][j];
+                for(i=0;i<new_N/2;i++){ 
+                    for(j=0;j<new_N/2;j++){
+                        C[i][j+new_N/2] = b[i][j];
                     }
                 }
-                for(i=0;i<N/2;i++){
-                    for(j=0;j<N/2;j++){
-                        C[i+N/2][j] = c[i][j];
+                for(i=0;i<new_N/2;i++){
+                    for(j=0;j<new_N/2;j++){
+                        C[i+new_N/2][j] = c[i][j];
                     }
                 }
-                for(i=0;i<N/2;i++){
-                    for(j=0;j<N/2;j++){
-                        C[i+N/2][j+N/2] = d[i][j];
+                for(i=0;i<new_N/2;i++){
+                    for(j=0;j<new_N/2;j++){
+                        C[i+new_N/2][j+new_N/2] = d[i][j];
                     }
                 }
+                break;
             }
             MPI_Send(&(C[0][0]), 10000, MPI_INT, parent_id, 201, MPI_COMM_WORLD);
         }
