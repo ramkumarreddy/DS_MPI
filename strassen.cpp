@@ -101,6 +101,16 @@ int main (int argc, char *argv[])
     MPI_Comm_size(MPI_COMM_WORLD, &numtasks);
     MPI_Comm_rank(MPI_COMM_WORLD,&taskid);
 
+
+
+    int d1=7,d2=0;
+    while(1){
+        if(d2+d1>numtasks)
+            break;
+        d2 += d1;
+        d1 *= 7;
+    }
+
     /***** Master task only ******/
     if (taskid == MASTER)
     {
@@ -119,7 +129,7 @@ int main (int argc, char *argv[])
 
 
         N = pow(2,ceil(log2(n)));   // matrix size after padding
-        cout << "N " << N << endl;
+        // cout << "N " << N << endl;
         temp1 = 7;
         temp = 0;
         levelby7 = 0;
@@ -134,7 +144,7 @@ int main (int argc, char *argv[])
         max_level = min(int(log2(N)),levelby7);           // maxlevels we can divide matrix
         cur_level = 1;
 
-        cout << "max_level " << max_level << endl;
+        // cout << "max_level " << max_level << endl;
 
 
         if(max_level>0){
@@ -208,7 +218,7 @@ int main (int argc, char *argv[])
 
 
     /***** Non-master tasks only *****/
-    if (taskid > MASTER)
+    if ((taskid > MASTER) && taskid<=d2)
     {
         source = MASTER;
         int y1=7,y2=0,y3=0,y4,from;
